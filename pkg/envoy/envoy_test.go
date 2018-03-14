@@ -73,16 +73,20 @@ func (s *EnvoySuite) TestEnvoy(c *C) {
 	stateLogDir := c.MkDir()
 	log.Debugf("state log directory: %s", stateLogDir)
 
+	xdsServer := StartXDSServer(stateLogDir)
+	defer xdsServer.stop()
+	StartAccessLogServer(stateLogDir, xdsServer)
+
 	// launch debug variant of the Envoy proxy
-	Envoy := StartEnvoy(9942, stateLogDir, filepath.Join(stateLogDir, "cilium-envoy.log"), 42)
-	c.Assert(Envoy, NotNil)
+	envoyProxy := StartEnvoy(9942, stateLogDir, filepath.Join(stateLogDir, "cilium-envoy.log"), 42)
+	c.Assert(envoyProxy, NotNil)
 	log.Debug("started Envoy")
 
 	sel := api.NewWildcardEndpointSelector()
 
 	// TODO: Test for success once we get feedback from Envoy.
 	log.Debug("adding listener1")
-	Envoy.AddListener("listener1", 8081, policy.L7DataMap{
+	xdsServer.AddListener("listener1", 8081, policy.L7DataMap{
 		sel: api.L7Rules{HTTP: []api.PortRuleHTTP{
 			{Path: "foo"},
 			{Method: "POST"},
@@ -91,13 +95,13 @@ func (s *EnvoySuite) TestEnvoy(c *C) {
 		true, &testRedirect{name: "listener1"}, s.waitGroup)
 
 	log.Debug("adding listener2")
-	Envoy.AddListener("listener2", 8082, policy.L7DataMap{
+	xdsServer.AddListener("listener2", 8082, policy.L7DataMap{
 		sel: api.L7Rules{HTTP: []api.PortRuleHTTP{
 			{Headers: []string{"via", "x-foo: bar"}}}}},
 		true, &testRedirect{name: "listener2"}, s.waitGroup)
 
 	log.Debug("adding listener3")
-	Envoy.AddListener("listener3", 8083, policy.L7DataMap{
+	xdsServer.AddListener("listener3", 8083, policy.L7DataMap{
 		sel: api.L7Rules{HTTP: []api.PortRuleHTTP{
 			{Method: "GET", Path: ".*public"}}}},
 		false, &testRedirect{name: "listener3"}, s.waitGroup)
@@ -109,7 +113,7 @@ func (s *EnvoySuite) TestEnvoy(c *C) {
 
 	// Update listener2
 	log.Debug("updating listener 2")
-	Envoy.UpdateListener("listener2", policy.L7DataMap{
+	xdsServer.UpdateListener("listener2", policy.L7DataMap{
 		sel: api.L7Rules{HTTP: []api.PortRuleHTTP{
 			{Headers: []string{"via: home", "x-foo: bar"}}}}}, s.waitGroup)
 
@@ -120,7 +124,7 @@ func (s *EnvoySuite) TestEnvoy(c *C) {
 
 	// Update listener1
 	log.Debug("updating listener 1")
-	Envoy.UpdateListener("listener1", policy.L7DataMap{
+	xdsServer.UpdateListener("listener1", policy.L7DataMap{
 		sel: api.L7Rules{HTTP: []api.PortRuleHTTP{
 			{Headers: []string{"via"}}}}}, s.waitGroup)
 
@@ -131,7 +135,7 @@ func (s *EnvoySuite) TestEnvoy(c *C) {
 
 	// Remove listener3
 	log.Debug("removing listener 3")
-	Envoy.RemoveListener("listener3", s.waitGroup)
+	xdsServer.RemoveListener("listener3", s.waitGroup)
 
 	err = s.waitForProxyCompletion()
 	c.Assert(err, IsNil)
@@ -140,7 +144,7 @@ func (s *EnvoySuite) TestEnvoy(c *C) {
 
 	// Add listener3 again
 	log.Debug("adding listener 3")
-	Envoy.AddListener("listener3", 8083, policy.L7DataMap{
+	xdsServer.AddListener("listener3", 8083, policy.L7DataMap{
 		sel: api.L7Rules{HTTP: []api.PortRuleHTTP{
 			{Method: "GET", Path: ".*public"}}}},
 		false, &testRedirect{name: "listener3"}, s.waitGroup)
@@ -150,11 +154,15 @@ func (s *EnvoySuite) TestEnvoy(c *C) {
 	log.Debug("completed adding listener 3")
 	s.waitGroup = completion.NewWaitGroup(ctx)
 
+	log.Debug("stopping Envoy")
+	err = envoyProxy.StopEnvoy()
+	c.Assert(err, IsNil)
+
+	time.Sleep(2 * time.Second) // Wait for Envoy to really terminate.
+
 	// Remove listener3 again, and wait for timeout after stopping Envoy.
 	log.Debug("removing listener 3")
-	Envoy.RemoveListener("listener3", s.waitGroup)
-	err = Envoy.StopEnvoy()
-	c.Assert(err, IsNil)
+	xdsServer.RemoveListener("listener3", s.waitGroup)
 	err = s.waitForProxyCompletion()
 	c.Assert(err, NotNil)
 	log.Debugf("failed to remove listener 3: %s", err)

@@ -35,24 +35,27 @@ var envoyProxy *envoy.Envoy
 
 // envoyRedirect implements the Redirect interface for a l7 proxy
 type envoyRedirect struct {
-	redirect *Redirect
+	redirect  *Redirect
+	xdsServer *envoy.XDSServer
 }
 
 var envoyOnce sync.Once
 
 // createEnvoyRedirect creates a redirect with corresponding proxy
 // configuration. This will launch a proxy instance.
-func createEnvoyRedirect(r *Redirect, wg *completion.WaitGroup) (RedirectImplementation, error) {
+func createEnvoyRedirect(r *Redirect, stateDir string, xdsServer *envoy.XDSServer, wg *completion.WaitGroup) (RedirectImplementation, error) {
 	envoyOnce.Do(func() {
 		// Start Envoy on first invocation
-		envoyProxy = envoy.StartEnvoy(9901, viper.GetString("state-dir"),
-			viper.GetString("envoy-log"), 0)
+		envoyProxy = envoy.StartEnvoy(9901, stateDir, viper.GetString("envoy-log"), 0)
 	})
 
 	if envoyProxy != nil {
-		redir := &envoyRedirect{redirect: r}
+		redir := &envoyRedirect{
+			redirect:  r,
+			xdsServer: xdsServer,
+		}
 
-		envoyProxy.AddListener(r.id, r.ProxyPort, r.rules, r.ingress, redir, wg)
+		xdsServer.AddListener(r.id, r.ProxyPort, r.rules, r.ingress, redir, wg)
 
 		return redir, nil
 	}
@@ -63,7 +66,7 @@ func createEnvoyRedirect(r *Redirect, wg *completion.WaitGroup) (RedirectImpleme
 // UpdateRules replaces old l7 rules of a redirect with new ones.
 func (r *envoyRedirect) UpdateRules(wg *completion.WaitGroup) error {
 	if envoyProxy != nil {
-		envoyProxy.UpdateListener(r.redirect.id, r.redirect.rules, wg)
+		r.xdsServer.UpdateListener(r.redirect.id, r.redirect.rules, wg)
 		return nil
 	}
 	return fmt.Errorf("%s: Envoy proxy process failed to start, can not update redirect ", r.redirect.id)
@@ -72,7 +75,7 @@ func (r *envoyRedirect) UpdateRules(wg *completion.WaitGroup) error {
 // Close the redirect.
 func (r *envoyRedirect) Close(wg *completion.WaitGroup) {
 	if envoyProxy != nil {
-		envoyProxy.RemoveListener(r.redirect.id, wg)
+		r.xdsServer.RemoveListener(r.redirect.id, wg)
 	}
 }
 
