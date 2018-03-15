@@ -96,13 +96,13 @@ func StartXDSServer(stateDir string) *XDSServer {
 	os.Remove(xdsPath)
 	socketListener, err := net.ListenUnix("unix", &net.UnixAddr{Name: xdsPath, Net: "unix"})
 	if err != nil {
-		log.WithError(err).Fatal("Envoy: Failed to listen at ", xdsPath)
+		log.WithError(err).Fatalf("Envoy: Failed to open xDS listen socket at %s", xdsPath)
 	}
 
 	// Make the socket accessible by non-root Envoy proxies, e.g. running in
 	// sidecar containers.
 	if err = os.Chmod(xdsPath, 0777); err != nil {
-		log.WithError(err).Fatal("Envoy: can't change mode of xDS socket at ", xdsPath)
+		log.WithError(err).Fatalf("Envoy: Failed to change mode of xDS listen socket at %s", xdsPath)
 	}
 
 	ldsCache := xds.NewCache()
@@ -197,13 +197,13 @@ func StartXDSServer(stateDir string) *XDSServer {
 
 // AddListener adds a listener to a running Envoy proxy.
 func (s *XDSServer) AddListener(name string, port uint16, l7rules policy.L7DataMap, isIngress bool, logger Logger, wg *completion.WaitGroup) {
-	log.Debug("Envoy: addListener ", name)
+	log.Debugf("Envoy: addListener %s", name)
 
 	s.mutex.Lock()
 
 	// Bail out if this listener already exists
 	if _, ok := s.loggers[name]; ok {
-		log.Fatalf("Envoy: addListener: Listener %s already exists!", name)
+		log.Fatalf("Envoy: Attempt to add existing listener: %s", name)
 	}
 
 	s.loggers[name] = logger
@@ -230,11 +230,11 @@ func (s *XDSServer) AddListener(name string, port uint16, l7rules policy.L7DataM
 // UpdateListener changes to the L7 rules of an existing Envoy Listener.
 func (s *XDSServer) UpdateListener(name string, l7rules policy.L7DataMap, wg *completion.WaitGroup) {
 	s.mutex.Lock()
-	log.Debug("Envoy: updateListener ", name)
+	log.Debugf("Envoy: updateListener %s", name)
 	l := s.loggers[name]
 	// Bail out if this listener does not exist
 	if l == nil {
-		log.Fatalf("Envoy: updateListener: Listener %s does not exist", name)
+		log.Fatalf("Envoy: Attempt to update non-existent listener: %s", name)
 	}
 	s.mutex.Unlock()
 
@@ -245,11 +245,11 @@ func (s *XDSServer) UpdateListener(name string, l7rules policy.L7DataMap, wg *co
 // RemoveListener removes an existing Envoy Listener.
 func (s *XDSServer) RemoveListener(name string, wg *completion.WaitGroup) {
 	s.mutex.Lock()
-	log.Debug("Envoy: removeListener ", name)
+	log.Debugf("Envoy: removeListener %s", name)
 	l := s.loggers[name]
 	// Bail out if this listener does not exist
 	if l == nil {
-		log.Fatalf("Envoy: removeListener: Listener %s does not exist", name)
+		log.Fatalf("Envoy: Attempt to remove non-existent listener: %s", name)
 	}
 	delete(s.loggers, name)
 	s.mutex.Unlock()
@@ -426,10 +426,10 @@ func createBootstrap(filePath string, name, cluster, version string, xdsSock, en
 		},
 	}
 
-	log.Debug("Envoy: Bootstrap: ", bs.String())
+	log.Debugf("Envoy: Bootstrap: %s", bs)
 	data, err := proto.Marshal(bs)
 	if err != nil {
-		log.WithError(err).Fatal("Envoy: Marshaling bootstrap failed")
+		log.WithError(err).Fatal("Envoy: Error marshaling Envoy bootstrap")
 	}
 	err = ioutil.WriteFile(filePath, data, 0644)
 	if err != nil {
@@ -575,7 +575,7 @@ func (s *XDSServer) UpdateNetworkPolicy(ep NetworkPolicyEndpoint, policy *policy
 		nodeIDs := make([]string, 0, 1)
 		if viper.GetBool("sidecar-http-proxy") {
 			if ep.GetIPv4Address() == "" {
-				log.Fatal("envoy: sidecar proxy has no IPv4 address")
+				log.Fatal("Envoy: Sidecar proxy has no IPv4 address")
 			}
 			nodeIDs = append(nodeIDs, ep.GetIPv4Address())
 		} else {
