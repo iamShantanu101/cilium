@@ -24,7 +24,7 @@ import (
 
 	"github.com/cilium/cilium/pkg/completion"
 	"github.com/cilium/cilium/pkg/policy"
-	"github.com/cilium/cilium/pkg/policy/api"
+	"github.com/cilium/cilium/pkg/policy/api/v2"
 
 	"github.com/sirupsen/logrus"
 
@@ -78,12 +78,12 @@ func (s *EnvoySuite) TestEnvoy(c *C) {
 	c.Assert(Envoy, NotNil)
 	log.Debug("started Envoy")
 
-	sel := api.NewWildcardEndpointSelector()
+	sel := v2.NewWildcardEndpointSelector()
 
 	// TODO: Test for success once we get feedback from Envoy.
 	log.Debug("adding listener1")
 	Envoy.AddListener("listener1", 8081, policy.L7DataMap{
-		sel: api.L7Rules{HTTP: []api.PortRuleHTTP{
+		sel: v2.L7Rules{HTTP: []v2.PortRuleHTTP{
 			{Path: "foo"},
 			{Method: "POST"},
 			{Host: "cilium"},
@@ -92,13 +92,13 @@ func (s *EnvoySuite) TestEnvoy(c *C) {
 
 	log.Debug("adding listener2")
 	Envoy.AddListener("listener2", 8082, policy.L7DataMap{
-		sel: api.L7Rules{HTTP: []api.PortRuleHTTP{
+		sel: v2.L7Rules{HTTP: []v2.PortRuleHTTP{
 			{Headers: []string{"via", "x-foo: bar"}}}}},
 		true, &testRedirect{name: "listener2"}, s.waitGroup)
 
 	log.Debug("adding listener3")
 	Envoy.AddListener("listener3", 8083, policy.L7DataMap{
-		sel: api.L7Rules{HTTP: []api.PortRuleHTTP{
+		sel: v2.L7Rules{HTTP: []v2.PortRuleHTTP{
 			{Method: "GET", Path: ".*public"}}}},
 		false, &testRedirect{name: "listener3"}, s.waitGroup)
 
@@ -110,7 +110,7 @@ func (s *EnvoySuite) TestEnvoy(c *C) {
 	// Update listener2
 	log.Debug("updating listener 2")
 	Envoy.UpdateListener("listener2", policy.L7DataMap{
-		sel: api.L7Rules{HTTP: []api.PortRuleHTTP{
+		sel: v2.L7Rules{HTTP: []v2.PortRuleHTTP{
 			{Headers: []string{"via: home", "x-foo: bar"}}}}}, s.waitGroup)
 
 	err = s.waitForProxyCompletion()
@@ -121,7 +121,7 @@ func (s *EnvoySuite) TestEnvoy(c *C) {
 	// Update listener1
 	log.Debug("updating listener 1")
 	Envoy.UpdateListener("listener1", policy.L7DataMap{
-		sel: api.L7Rules{HTTP: []api.PortRuleHTTP{
+		sel: v2.L7Rules{HTTP: []v2.PortRuleHTTP{
 			{Headers: []string{"via"}}}}}, s.waitGroup)
 
 	err = s.waitForProxyCompletion()
@@ -141,7 +141,7 @@ func (s *EnvoySuite) TestEnvoy(c *C) {
 	// Add listener3 again
 	log.Debug("adding listener 3")
 	Envoy.AddListener("listener3", 8083, policy.L7DataMap{
-		sel: api.L7Rules{HTTP: []api.PortRuleHTTP{
+		sel: v2.L7Rules{HTTP: []v2.PortRuleHTTP{
 			{Method: "GET", Path: ".*public"}}}},
 		false, &testRedirect{name: "listener3"}, s.waitGroup)
 

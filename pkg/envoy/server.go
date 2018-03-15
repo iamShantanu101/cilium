@@ -34,7 +34,7 @@ import (
 	"github.com/cilium/cilium/pkg/identity"
 	"github.com/cilium/cilium/pkg/lock"
 	"github.com/cilium/cilium/pkg/policy"
-	"github.com/cilium/cilium/pkg/policy/api"
+	"github.com/cilium/cilium/pkg/policy/api/v2"
 
 	"fmt"
 	"github.com/gogo/protobuf/sortkeys"
@@ -245,7 +245,7 @@ func (s *XDSServer) stop() {
 	os.Remove(s.socketPath)
 }
 
-func getHTTPRule(h *api.PortRuleHTTP) (headers []*envoy_api_v2_route.HeaderMatcher, ruleRef string) {
+func getHTTPRule(h *v2.PortRuleHTTP) (headers []*envoy_api_v2_route.HeaderMatcher, ruleRef string) {
 	// Count the number of header matches we need
 	cnt := len(h.Headers)
 	if h.Path != "" {
@@ -302,7 +302,7 @@ func getHTTPRule(h *api.PortRuleHTTP) (headers []*envoy_api_v2_route.HeaderMatch
 	return
 }
 
-func getRoute(h *api.PortRuleHTTP) *envoy_api_v2_route.Route {
+func getRoute(h *v2.PortRuleHTTP) *envoy_api_v2_route.Route {
 	headers, ruleRef := getHTTPRule(h)
 
 	// Envoy v2 API has a Path Regex, but it has not been
@@ -407,7 +407,7 @@ func createBootstrap(filePath string, name, cluster, version string, xdsSock, en
 	}
 }
 
-func getPortNetworkPolicyRule(sel api.EndpointSelector, l7Parser policy.L7ParserType, l7Rules api.L7Rules,
+func getPortNetworkPolicyRule(sel v2.EndpointSelector, l7Parser policy.L7ParserType, l7Rules v2.L7Rules,
 	labelsMap identity.IdentityCache, deniedIdentities map[identity.NumericIdentity]bool) *cilium.PortNetworkPolicyRule {
 	// In case the endpoint selector is a wildcard and there are no denied
 	// identities, optimize the policy by setting an empty remote policies list
@@ -466,9 +466,9 @@ func getDirectionNetworkPolicy(l4Policy policy.L4PolicyMap, labelsMap identity.I
 	for _, l4 := range l4Policy {
 		var protocol envoy_api_v2_core.SocketAddress_Protocol
 		switch l4.Protocol {
-		case api.ProtoTCP:
+		case v2.ProtoTCP:
 			protocol = envoy_api_v2_core.SocketAddress_TCP
-		case api.ProtoUDP:
+		case v2.ProtoUDP:
 			protocol = envoy_api_v2_core.SocketAddress_UDP
 		}
 

@@ -22,7 +22,7 @@ import (
 	"github.com/cilium/cilium/pkg/identity"
 	"github.com/cilium/cilium/pkg/logging/logfields"
 	"github.com/cilium/cilium/pkg/policy"
-	"github.com/cilium/cilium/pkg/policy/api"
+	"github.com/cilium/cilium/pkg/policy/api/v2"
 
 	"github.com/optiopay/kafka"
 	"github.com/optiopay/kafka/proto"
@@ -180,10 +180,10 @@ func (k *proxyTestSuite) TestKafkaRedirect(c *C) {
 	_, serverPort := server.HostPort()
 	proxyAddress := fmt.Sprintf("%s:%d", proxyAddress, uint16(proxyPort))
 
-	kafkaRule1 := api.PortRuleKafka{APIKey: "metadata", APIVersion: "0"}
+	kafkaRule1 := v2.PortRuleKafka{APIKey: "metadata", APIVersion: "0"}
 	c.Assert(kafkaRule1.Sanitize(), IsNil)
 
-	kafkaRule2 := api.PortRuleKafka{APIKey: "produce", APIVersion: "0", Topic: "allowedTopic"}
+	kafkaRule2 := v2.PortRuleKafka{APIKey: "produce", APIVersion: "0", Topic: "allowedTopic"}
 	c.Assert(kafkaRule2.Sanitize(), IsNil)
 
 	r := newRedirect(uint16(serverPort), sourceMocker, "foo")
@@ -191,8 +191,8 @@ func (k *proxyTestSuite) TestKafkaRedirect(c *C) {
 	r.ingress = true
 
 	r.rules = policy.L7DataMap{
-		policy.WildcardEndpointSelector: api.L7Rules{
-			Kafka: []api.PortRuleKafka{kafkaRule1, kafkaRule2},
+		policy.WildcardEndpointSelector: v2.L7Rules{
+			Kafka: []v2.PortRuleKafka{kafkaRule1, kafkaRule2},
 		},
 	}
 

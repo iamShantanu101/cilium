@@ -22,7 +22,7 @@ import (
 	"io"
 
 	"github.com/cilium/cilium/pkg/flowdebug"
-	"github.com/cilium/cilium/pkg/policy/api"
+	"github.com/cilium/cilium/pkg/policy/api/v2"
 	"github.com/cilium/cilium/pkg/proxy/accesslog"
 
 	"github.com/optiopay/kafka/proto"
@@ -216,7 +216,7 @@ func ReadRequest(reader io.Reader) (*RequestMessage, error) {
 }
 
 func apiKeyToString(apiKey int16) string {
-	if key, ok := api.KafkaReverseAPIKeyMap[apiKey]; ok {
+	if key, ok := v2.KafkaReverseAPIKeyMap[apiKey]; ok {
 		return key
 	}
 	return fmt.Sprintf("%d", apiKey)
