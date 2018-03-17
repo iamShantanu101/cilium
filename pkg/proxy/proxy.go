@@ -418,6 +418,9 @@ func (p *Proxy) RemoveRedirect(id string, wg *completion.WaitGroup) error {
 // published to L7 proxies.
 func (p *Proxy) UpdateNetworkPolicy(ep envoy.NetworkPolicyEndpoint, policy *policy.L4Policy,
 	labelsMap identityPkg.IdentityCache, deniedIngressIdentities, deniedEgressIdentities map[identityPkg.NumericIdentity]bool, wg *completion.WaitGroup) error {
+	if !npdsStarted {
+		wg = nil
+	}
 	return envoy.UpdateNetworkPolicy(ep, policy, labelsMap, deniedIngressIdentities, deniedEgressIdentities, wg)
 }
 

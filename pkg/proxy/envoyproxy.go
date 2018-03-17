@@ -41,6 +41,8 @@ type envoyRedirect struct {
 
 var envoyOnce sync.Once
 
+var npdsStarted bool = false
+
 // createEnvoyRedirect creates a redirect with corresponding proxy
 // configuration. This will launch a proxy instance.
 func createEnvoyRedirect(r *Redirect, wg *completion.WaitGroup) (RedirectImplementation, error) {
@@ -61,6 +63,9 @@ func createEnvoyRedirect(r *Redirect, wg *completion.WaitGroup) (RedirectImpleme
 			return nil, fmt.Errorf("%s: Cannot create redirect, proxy source has no IP address.", r.id)
 		}
 		envoyProxy.AddListener(r.id, ip, r.ProxyPort, r.ingress, redir, wg)
+
+		// First listener starts NPDS
+		npdsStarted = true
 
 		return redir, nil
 	}
