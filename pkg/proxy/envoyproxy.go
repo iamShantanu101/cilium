@@ -60,7 +60,7 @@ func createEnvoyRedirect(r *Redirect, wg *completion.WaitGroup) (RedirectImpleme
 		if ip == "" {
 			return nil, fmt.Errorf("%s: Cannot create redirect, proxy source has no IP address.", r.id)
 		}
-		envoyProxy.AddListener(r.id, ip, r.ProxyPort, r.rules, r.ingress, redir, wg)
+		envoyProxy.AddListener(r.id, ip, r.ProxyPort, r.ingress, redir, wg)
 
 		return redir, nil
 	}
@@ -70,11 +70,7 @@ func createEnvoyRedirect(r *Redirect, wg *completion.WaitGroup) (RedirectImpleme
 
 // UpdateRules replaces old l7 rules of a redirect with new ones.
 func (r *envoyRedirect) UpdateRules(wg *completion.WaitGroup) error {
-	if envoyProxy != nil {
-		envoyProxy.UpdateListener(r.redirect.id, r.redirect.rules, wg)
-		return nil
-	}
-	return fmt.Errorf("%s: Envoy proxy process failed to start, can not update redirect ", r.redirect.id)
+	return nil
 }
 
 // Close the redirect.
