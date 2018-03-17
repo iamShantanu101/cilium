@@ -82,7 +82,7 @@ func (s *EnvoySuite) TestEnvoy(c *C) {
 
 	// TODO: Test for success once we get feedback from Envoy.
 	log.Debug("adding listener1")
-	Envoy.AddListener("listener1", 8081, policy.L7DataMap{
+	Envoy.AddListener("listener1", "1.2.3.4", 8081, policy.L7DataMap{
 		sel: api.L7Rules{HTTP: []api.PortRuleHTTP{
 			{Path: "foo"},
 			{Method: "POST"},
@@ -91,13 +91,13 @@ func (s *EnvoySuite) TestEnvoy(c *C) {
 		true, &testRedirect{name: "listener1"}, s.waitGroup)
 
 	log.Debug("adding listener2")
-	Envoy.AddListener("listener2", 8082, policy.L7DataMap{
+	Envoy.AddListener("listener2", "1.2.3.4", 8082, policy.L7DataMap{
 		sel: api.L7Rules{HTTP: []api.PortRuleHTTP{
 			{Headers: []string{"via", "x-foo: bar"}}}}},
 		true, &testRedirect{name: "listener2"}, s.waitGroup)
 
 	log.Debug("adding listener3")
-	Envoy.AddListener("listener3", 8083, policy.L7DataMap{
+	Envoy.AddListener("listener3", "1.2.3.4", 8083, policy.L7DataMap{
 		sel: api.L7Rules{HTTP: []api.PortRuleHTTP{
 			{Method: "GET", Path: ".*public"}}}},
 		false, &testRedirect{name: "listener3"}, s.waitGroup)
@@ -140,7 +140,7 @@ func (s *EnvoySuite) TestEnvoy(c *C) {
 
 	// Add listener3 again
 	log.Debug("adding listener 3")
-	Envoy.AddListener("listener3", 8083, policy.L7DataMap{
+	Envoy.AddListener("listener3", "1.2.3.4", 8083, policy.L7DataMap{
 		sel: api.L7Rules{HTTP: []api.PortRuleHTTP{
 			{Method: "GET", Path: ".*public"}}}},
 		false, &testRedirect{name: "listener3"}, s.waitGroup)
