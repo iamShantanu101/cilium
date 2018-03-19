@@ -448,7 +448,8 @@ type PortRuleKafka struct {
 	// This field is incompatible with the APIKey field, i.e APIKey and Role
 	// cannot both be specified in the same rule.
 	//
-	// If omitted or empty, all keys are allowed.
+	// If omitted or empty, and if APIKey is not specified, then all keys are
+	// allowed.
 
 	// +optional
 	Role string `json:"role,omitempty"`
@@ -457,7 +458,7 @@ type PortRuleKafka struct {
 	// request, e.g. "produce", "fetch", "createtopic", "deletetopic", et al
 	// Reference: https://kafka.apache.org/protocol#protocol_api_keys
 	//
-	// If omitted or empty, all keys are allowed.
+	// If omitted or empty, and if Role is not specified, then all keys are allowed.
 	//
 	// +optional
 	APIKey string `json:"apiKey,omitempty"`
